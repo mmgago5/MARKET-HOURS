@@ -1,275 +1,145 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sesiones Forex y Nasdaq</title>
+  <meta charset="UTF-8">
+  <title>Sesiones Forex Destacado</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
       background-color: #0d1117;
-      color: #e6edf3;
-    }
-    header {
-      background-color: #161b22;
-      padding: 1rem;
-      text-align: center;
-      border-bottom: 2px solid #30363d;
-    }
-    h1 {
-      margin: 0;
-      font-size: 1.8rem;
-    }
-    .timezone-selector {
-      margin: 1rem;
-      text-align: center;
-    }
-    select {
-      padding: 0.5rem;
-      font-size: 1rem;
-      background-color: #21262d;
       color: #c9d1d9;
-      border: 1px solid #30363d;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
     }
-    .clock {
-      text-align: center;
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    .session-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
-      padding: 1rem;
-    }
-    .session {
-      background-color: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 1rem;
-    }
-    .session.active {
-      border-color: #3fb950;
-      box-shadow: 0 0 8px #3fb95055;
-    }
-    .session.next {
-      border-color: #58a6ff;
-      box-shadow: 0 0 8px #58a6ff55;
-    }
-    .nasdaq-section {
-      margin: 2rem auto;
-      max-width: 1000px;
-      padding: 1rem;
-    }
-    .nasdaq-title {
-      font-size: 1.5rem;
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    .links {
-      text-align: center;
-      margin-top: 2rem;
-    }
-    .links a {
+
+    h1 {
       color: #58a6ff;
-      margin: 0 0.5rem;
-      text-decoration: none;
+    }
+
+    #timezone {
+      padding: 0.6rem;
+      font-size: 1.1rem;
+      border-radius: 5px;
+      background-color: #0d1117;
+      color: #58a6ff;
+      border: 1px solid #58a6ff;
+    }
+
+    .session {
+      padding: 0.5rem;
+      border-radius: 5px;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+      width: fit-content;
+    }
+
+    .open { background-color: #006400; color: white; }
+    .upcoming { background-color: #ffcc00; color: black; }
+    .closed { background-color: #8b0000; color: white; }
+
+    .legend {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #1e1e1e;
+      color: #fff;
+      max-width: 400px;
+    }
+
+    .legend div {
+      margin-bottom: 0.5rem;
+    }
+
+    .legend span {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      margin-right: 8px;
+      vertical-align: middle;
+      border-radius: 3px;
     }
   </style>
-
-<style>
-  .session {
-    padding: 0.5rem;
-    border-radius: 5px;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-    width: fit-content;
-  }
-  .open { background-color: #006400; color: white; }        /* verde */
-  .upcoming { background-color: #ffcc00; color: black; }    /* amarillo */
-  .closed { background-color: #8b0000; color: white; }      /* rojo */
-  .legend {
-    margin-top: 1rem;
-    padding: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    background-color: #1e1e1e;
-    color: #fff;
-    max-width: 400px;
-  }
-  .legend div {
-    margin-bottom: 0.5rem;
-  }
-  .legend span {
-    display: inline-block;
-    width: 15px;
-    height: 15px;
-    margin-right: 8px;
-    vertical-align: middle;
-    border-radius: 3px;
-  }
-</style>
-
 </head>
 <body>
-  <header>
-    <h1>Sesiones Forex en Tiempo Real</h1>
-  </header>
-  <div class="timezone-selector">
-    <label for="timezone">Seleccioná tu zona horaria: </label>
-    <select id="timezone" style="padding: 0.6rem; font-size: 1.1rem; border-radius: 5px; background-color: #0d1117; color: #58a6ff; border: 1px solid #58a6ff;"></select>
+  <h1>Sesiones Forex</h1>
+  <div>
+    <label for="timezone">Seleccionar zona horaria:</label>
+    <select id="timezone"></select>
   </div>
-  <div class="clock" id="clock">Cargando hora...</div>
-  <div class="clock" id="next-openings"></div>
-  <div class="session-container" id="sessions"></div>
+  <div id="clock" style="margin: 1rem 0; font-size: 1.5rem;"></div>
 
-  <div class="nasdaq-section">
-    <div class="nasdaq-title">NASDAQ en tiempo real</div>
-    <div class="tradingview-widget-container">
-      <div id="tradingview_7c2b3"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-      <script type="text/javascript">
-        new TradingView.widget({
-          "width": "100%",
-          "height": 500,
-          "symbol": "NASDAQ:IXIC",
-          "interval": "D",
-          "timezone": "Etc/UTC",
-          "theme": "dark",
-          "style": "1",
-          "locale": "es",
-          "toolbar_bg": "#0d1117",
-          "enable_publishing": false,
-          "allow_symbol_change": true,
-          "container_id": "tradingview_7c2b3"
-        });
-      </script>
-    </div>
-  </div>
+  <div id="sessions">
+    <div id="Tokio"></div>
+    <div id="Londres"></div>
+    <div id="Nueva York"></div>
+  </div><!-- sessions -->
 
-  <div class="links">
-    <p>Enlaces útiles:</p>
-    <a href="https://es.investing.com/economic-calendar/" target="_blank">Calendario Económico</a>
-    <a href="https://www.tradingview.com/markets/currencies/" target="_blank">Cotizaciones en Tiempo Real</a>
-    <a href="https://www.marketwatch.com/investing/index/comp" target="_blank">Nasdaq en MarketWatch</a>
+  <div class="legend">
+    <strong>Referencia de colores:</strong>
+    <div><span style="background-color:#006400;"></span> Sesión abierta</div>
+    <div><span style="background-color:#ffcc00;"></span> Próxima a abrirse</div>
+    <div><span style="background-color:#8b0000;"></span> Sesión cerrada</div>
   </div>
 
   <script>
-    const SESSIONS_UTC = [
-      { name: "Sídney", startUTC: 22, endUTC: 7 },
-      { name: "Tokio", startUTC: 0, endUTC: 9 },
-      { name: "Londres", startUTC: 8, endUTC: 17 },
-      { name: "Nueva York", startUTC: 13, endUTC: 22 },
-      { name: "Nasdaq", startUTC: 13.5, endUTC: 20 }
-    ];
-
     const timezoneSelect = document.getElementById("timezone");
-    const sessionsDiv = document.getElementById("sessions");
-    const clockDiv = document.getElementById("clock");
-    const nextOpeningsDiv = document.getElementById("next-openings");
-
     const timezones = Intl.supportedValuesOf("timeZone");
 
-timezones.forEach(tz => {
-  try {
-    const now = new Date();
-    const tzDate = new Date(now.toLocaleString("en-US", { timeZone: tz }));
-    const offset = (tzDate.getTime() - now.getTime()) / 60000;
-    const offsetHours = Math.floor(offset / 60);
-    const offsetMinutes = Math.abs(offset % 60);
-    const gmtOffset = `UTC${offsetHours >= 0 ? "+" : ""}${offsetHours}:${offsetMinutes.toString().padStart(2, '0')}`;
-    const country = tz.split("/")[0].replace("_", " ");
-    const city = tz.split("/")[1]?.replace("_", " ") || tz;
-
-    const option = document.createElement("option");
-    option.value = tz;
-    option.textContent = `${city} (${gmtOffset}) - ${country}`;
-    if (tz === Intl.DateTimeFormat().resolvedOptions().timeZone) option.selected = true;
-    timezoneSelect.appendChild(option);
-  } catch (e) {
-    console.warn(`Error con zona horaria ${tz}:`, e);
-  }
-});
     timezones.forEach(tz => {
-      const option = document.createElement("option");
-      option.value = tz;
-      option.textContent = tz;
-      if (tz === Intl.DateTimeFormat().resolvedOptions().timeZone) option.selected = true;
-      timezoneSelect.appendChild(option);
+      try {
+        const now = new Date();
+        const tzDate = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+        const offset = (tzDate.getTime() - now.getTime()) / 60000;
+        const offsetHours = Math.floor(offset / 60);
+        const offsetMinutes = Math.abs(offset % 60);
+        const gmtOffset = `UTC${offsetHours >= 0 ? "+" : ""}${offsetHours}:${offsetMinutes.toString().padStart(2, '0')}`;
+        const country = tz.split("/")[0].replace("_", " ");
+        const city = tz.split("/")[1]?.replace("_", " ") || tz;
+
+        const option = document.createElement("option");
+        option.value = tz;
+        option.textContent = `${city} (${gmtOffset}) - ${country}`;
+        if (tz === Intl.DateTimeFormat().resolvedOptions().timeZone) option.selected = true;
+        timezoneSelect.appendChild(option);
+      } catch (e) {
+        console.warn(`Error con zona horaria ${tz}:`, e);
+      }
     });
 
+    const sessions = [
+      { name: "Tokio", start: 0, end: 9 },
+      { name: "Londres", start: 8, end: 17 },
+      { name: "Nueva York", start: 13, end: 22 }
+    ];
+
     function updateClockAndSessions() {
+      const now = new Date();
       const tz = timezoneSelect.value;
-      const now = new Date().toLocaleString("en-US", { timeZone: tz });
-      const date = new Date(now);
-      const hour = date.getHours() + date.getMinutes() / 60;
-      clockDiv.textContent = `Hora actual: ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+      const localTime = new Date(now.toLocaleString("en-US", { timeZone: tz }));
+      const hour = localTime.getHours();
+      const minute = localTime.getMinutes();
+      document.getElementById("clock").textContent = `Hora actual: ${localTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
 
-      sessionsDiv.innerHTML = "";
-      let nextSession = null;
-      let minDiff = Infinity;
-      const nowTime = date.getTime();
+      sessions.forEach(session => {
+        const sessionDiv = document.getElementById(session.name);
+        sessionDiv.classList.remove("open", "upcoming", "closed");
 
-      SESSIONS_UTC.forEach(session => {
-        const startLocal = convertUTCToTZ(session.startUTC, tz);
-        const endLocal = convertUTCToTZ(session.endUTC, tz);
-        const isActive = isNowBetween(hour, startLocal, endLocal);
-
-        const startTime = new Date(date);
-        startTime.setHours(Math.floor(startLocal), (startLocal % 1) * 60, 0, 0);
-        if (startTime < date) startTime.setDate(startTime.getDate() + 1);
-        const diff = startTime - nowTime;
-
-        if (!isActive && diff < minDiff) {
-          minDiff = diff;
-          nextSession = { ...session, diff, startLocal };
+        if (hour >= session.start && hour < session.end) {
+          sessionDiv.textContent = `${session.name} - ABIERTA`;
+          sessionDiv.classList.add("session", "open");
+        } else if (hour < session.start && session.start - hour <= 1) {
+          sessionDiv.textContent = `${session.name} - PRÓXIMA`;
+          sessionDiv.classList.add("session", "upcoming");
+        } else {
+          sessionDiv.textContent = `${session.name} - CERRADA`;
+          sessionDiv.classList.add("session", "closed");
         }
-
-        const div = document.createElement("div");
-        div.className = "session" + (isActive ? " active" : "");
-        div.innerHTML = `<strong>${session.name}</strong><br>${formatHour(startLocal)} - ${formatHour(endLocal)}`;
-        sessionsDiv.appendChild(div);
       });
-
-      if (nextSession) {
-        const hours = Math.floor(nextSession.diff / 3600000);
-        const minutes = Math.round((nextSession.diff % 3600000) / 60000);
-        nextOpeningsDiv.textContent = `Próxima sesión: ${nextSession.name} abre en ${hours}h ${minutes}m`;
-
-        Array.from(sessionsDiv.children).forEach(child => {
-          if (child.textContent.includes(nextSession.name)) {
-            child.classList.add("next");
-          }
-        });
-      }
-    }
-
-    function convertUTCToTZ(utcHour, tz) {
-      const utcDate = new Date(Date.UTC(2000, 0, 1, Math.floor(utcHour), (utcHour % 1) * 60));
-      const tzDate = new Date(utcDate.toLocaleString("en-US", { timeZone: tz }));
-      return tzDate.getHours() + tzDate.getMinutes() / 60;
-    }
-
-    function isNowBetween(now, start, end) {
-      return start < end ? now >= start && now < end : now >= start || now < end;
-    }
-
-    function formatHour(h) {
-      const hour = Math.floor(h);
-      const minute = Math.round((h % 1) * 60);
-      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     }
 
     timezoneSelect.addEventListener("change", updateClockAndSessions);
     setInterval(updateClockAndSessions, 1000);
     updateClockAndSessions();
   </script>
-
-  <footer style="text-align: center; padding: 1rem; background-color: #161b22; border-top: 1px solid #30363d; margin-top: 2rem;">
-    Creado por <strong>Maximiliano GAGO</strong>
-  </footer>
 </body>
 </html>
-
