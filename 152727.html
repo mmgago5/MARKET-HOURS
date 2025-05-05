@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Monitor de Sesiones del Mercado</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0f172a;
+      background-image: url('https://www.transparenttextures.com/patterns/graph-paper.png');
+      background-size: cover;
+      background-repeat: repeat;
+      color: #f1f5f9;
+      padding: 2rem;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 2.5rem;
+      color: gold;
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+    .description {
+      color: gold;
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+    .timezone-select {
+      display: block;
+      margin: 1rem auto;
+      padding: 0.5rem;
+      border-radius: 1rem;
+      border: none;
+      font-size: 1rem;
+      background-color: #1e293b;
+      color: #f8fafc;
+    }
+    .clock {
+      text-align: center;
+      background-color: #1e293b;
+      padding: 1rem;
+      border-radius: 1rem;
+      font-size: 1.5rem;
+      color: #e0f2fe;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+    .legend {
+      background-color: #1e293b;
+      color: #f8fafc;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .legend div {
+      margin-bottom: 0.5rem;
+    }
+    .session {
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      background-color: #1e293b;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    .progress-bar {
+      height: 20px;
+      background-color: #1e293b;
+      border-radius: 2px;
+      overflow: hidden;
+      border: 1px solid #334155;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      transition: width 0.5s;
+    }
+    .nasdaq-chart {
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Monitor de Sesiones del Mercado</h1>
+  <p class="description">Desarrollado por @mmgago5 - Visualización en tiempo real del mercado global</p>
+  <select id="timezone" class="timezone-select"></select>
+  <div id="clock" class="clock"></div>
+  <div class="legend">
+    <strong>Referencia de sesión:</strong>
+    <div style="color: #10b981;">Verde: Abierta (relleno representa progreso)</div>
+    <div style="color: #eab308;">Amarillo: Próxima (abre pronto)</div>
+    <div style="color: #dc2626;">Rojo: Cerrada</div>
+  </div>
+  <div id="sessions"></div>
+  <div class="nasdaq-chart">
+    <h2 id="chart-title" style="text-align:center; color:#38bdf8;">NASDAQ en tiempo real</h2>
+    <select id="chartSelector" class="timezone-select">
+      <option value="NASDAQ:NDX">NASDAQ</option>
+      <option value="SP:SPX">S&P 500</option>
+    </select>
+    <div style="height:500px;">
+      <iframe id="chartFrame" src="" width="100%" height="500" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
+    </div>
+  </div>
+  <script defer>
+    const capitals = {
+      "-12": "Baker Island",
+      "-11": "Pago Pago",
+      "-10": "Honolulu",
+      "-9": "Anchorage",
+      "-8": "Los Ángeles",
+      "-7": "Denver",
+      "-6": "Ciudad de México",
+      "-5": "Nueva York",
+      "-4": "Santo Domingo",
+      "-3": "Buenos Aires",
+      "-2": "Fernando de Noronha",
+      "-1": "Azores",
+       "0": "Londres",
+       "1": "París",
+       "2": "El Cairo",
+       "3": "Moscú",
+       "4": "Dubái",
+       "5": "Karachi",
+       "6": "Dacca",
+       "7": "Bangkok",
+       "8": "Beijing",
+       "9": "Tokio",
+      "10": "Sídney",
+      "11": "Honiara",
+      "12": "Auckland",
+      "13": "Nukualofa",
+      "14": "Kiritimati"
+    };
+
+    // Función para formatear minutos
+    function formatMinutes(mins) {
+      const h = Math.floor(mins / 60);
+      const m = Math.abs(mins % 60);
+      return (h > 0 ? h + "h " : "") + m + "m";
+    }
+
+    // Función para determinar el horario de verano en EE.UU.
+    function isUSDaylightSavingTime(date = new Date()) {
+      const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
+      const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
+      return Math.max(jan, jul) !== date.getTimezoneOffset();
+    }
+
+    // Parsear hora decimal
+    function parseHourDecimal(hourDecimal) {
+      const hours = Math.floor(hourDecimal);
+      const minutes = (hourDecimal - hours) * 60;
+      return { hours, minutes };
+    }
+
+    // Definir las sesiones del mercado
+    const sessionData = () => {
+      const inUSDST = isUSDaylightSavingTime();
+      const nasdaqSession = inUSDST
+        ? { name: "Nasdaq", flag: "🇺🇸", open: 13.5, close: 20 }
+        : { name: "Nasdaq", flag: "🇺🇸", open: 14.5, close: 21 };
+      return [
+        { name: "Sídney", flag: "🇦🇺", open: 18, close: 3 },
+        { name: "Tokio", flag: "🇯🇵", open: 20, close: 5 },
+        { name: "Londres", flag: "🇬🇧", open: 4, close: 13 },
+        { name: "Nueva York", flag: "🇺🇸", open: 13.5, close: 20 },
+        nasdaqSession
+      ];
+    };
+
+    // Obtener el estado de las sesiones
+    function getStatus(session, now) {
+      const openTime = parseHourDecimal(session.open);
+      const closeTime = parseHourDecimal(session.close);
+      const open = new Date(now);
+      open.setHours(openTime.hours, openTime.minutes, 0, 0);
+      const close = new Date(now);
+      close.setHours(closeTime.hours, closeTime.minutes, 0, 0);
+      if (session.close < session.open) close.setDate(close.getDate() + 1);
+      const isOpen = now >= open && now <= close;
+      const duration = (close - open) / 60000;
+      const elapsed = isOpen ? (now - open) / 60000 : 0;
+      const progress = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+      const minutesToOpen = Math.floor((open - now) / 60000);
+      const minutesToClose = Math.floor((close - now) / 60000);
+      return { isOpen, progress, minutesToOpen, minutesToClose };
+    }
+
+    // Actualizar el reloj con la zona horaria seleccionada
+    function updateClock(offset) {
+      const now = new Date();
+      const utc = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+      const local = new Date(utc.getTime() + offset * 60 * 60000);
+      document.getElementById("clock").textContent = "Hora actual: " + local.toLocaleTimeString("es-UY", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return local;
+    }
+
+    // Actualizar las sesiones según la hora local
+    function updateSessions(local) {
+      const container = document.getElementById("sessions");
+      container.innerHTML = "";
+      const sessions = sessionData();
+      sessions.forEach(session => {
+        const { isOpen, progress, minutesToOpen, minutesToClose } = getStatus(session, local);
+        const isNext = !isOpen && minutesToOpen >= 0 && minutesToOpen < 240;
+        let color = "#dc2626";
+        let fill = "#7f1d1d";
+        if (isOpen) {
+          color = "#10b981";
+          fill = "#047857";
+        } else if (isNext) {
+          color = "#eab308";
+          fill = "#92400e";
+        }
+        const div = document.createElement("div");
+        div.className = "session";
+        div.innerHTML = `
+          <h2>${session.flag} ${session.name}</h2>
+          <div class="progress-bar" style="background-color:${fill};">
+            <div class="progress-fill" style="width:${progress}%; background-color:${color};"></div>
+          </div>
+          <p>Estado: <strong style="color:${color}">${isOpen ? "Abierta" : isNext ? "Próxima" : "Cerrada"}</strong></p>
+          <p>${
+            isOpen
+              ? `Cierra en ${formatMinutes(minutesToClose)}`
+              : `Abre en ${formatMinutes(minutesToOpen < 0 ? minutesToOpen + 1440 : minutesToOpen)}`
+          }</p>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Poblar las zonas horarias disponibles
+    function populateTimezones() {
+      const select = document.getElementById("timezone");
+      for (let i = -12; i <= 14; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = `GMT ${i >= 0 ? "+" + i : i} (${capitals[i] || "Ciudad desconocida"})`;
+        if (i === 0) option.selected = true;  // Seleccionar UTC por defecto
+        select.appendChild(option);
+      }
+    }
+
+    // Función para actualizar el gráfico en tiempo real de NASDAQ o S&P 500
+    function updateChart(symbol = "NASDAQ:NDX") {
+      document.getElementById("chartFrame").src = `https://s.tradingview.com/embed-widget/mini-symbol-overview/?symbol=${symbol}&locale=es&utm_source=embed&utm_medium=widget&utm_campaign=chart&theme=dark&style=1`;
+      document.getElementById("chart-title").textContent = symbol.includes("SP") ? "S&P 500 en tiempo real" : "NASDAQ en tiempo real";
+    }
+
+    // Iniciar la aplicación
+    function startApp() {
+      populateTimezones();
+      let offset = parseInt(document.getElementById("timezone").value);
+      let local = updateClock(offset);
+      updateSessions(local);
+      updateChart();
+      setInterval(() => {
+        local = updateClock(offset);
+      }, 1000);
+      setInterval(() => {
+        updateSessions(local);
+      }, 60000);
+      document.getElementById("timezone").addEventListener("change", () => {
+        offset = parseInt(document.getElementById("timezone").value);
+        local = updateClock(offset);
+        updateSessions(local);
+      });
+      document.getElementById("chartSelector").addEventListener("change", (e) => {
+        updateChart(e.target.value);
+      });
+    }
+
+    startApp();
+  </script>
+</body>
+</html>
