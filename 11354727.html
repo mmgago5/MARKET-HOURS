@@ -137,33 +137,32 @@
       "14": "Kiritimati"
     };
 
-    // Función para formatear minutos
+    const nasdaqOpenET = 9.5; // 9:30 AM Eastern Time (ET)
+    const nasdaqCloseET = 16; // 4:00 PM Eastern Time (ET)
+
     function formatMinutes(mins) {
       const h = Math.floor(mins / 60);
       const m = Math.abs(mins % 60);
       return (h > 0 ? h + "h " : "") + m + "m";
     }
 
-    // Función para determinar el horario de verano en EE.UU.
     function isUSDaylightSavingTime(date = new Date()) {
       const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
       const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
       return Math.max(jan, jul) !== date.getTimezoneOffset();
     }
 
-    // Parsear hora decimal
     function parseHourDecimal(hourDecimal) {
       const hours = Math.floor(hourDecimal);
       const minutes = (hourDecimal - hours) * 60;
       return { hours, minutes };
     }
 
-    // Definir las sesiones del mercado
     const sessionData = () => {
       const inUSDST = isUSDaylightSavingTime();
       const nasdaqSession = inUSDST
-        ? { name: "Nasdaq", flag: "🇺🇸", open: 13.5, close: 20 }
-        : { name: "Nasdaq", flag: "🇺🇸", open: 14.5, close: 21 };
+        ? { name: "Nasdaq", flag: "🇺🇸", open: nasdaqOpenET, close: nasdaqCloseET }
+        : { name: "Nasdaq", flag: "🇺🇸", open: nasdaqOpenET + 1, close: nasdaqCloseET + 1 };
       return [
         { name: "Sídney", flag: "🇦🇺", open: 18, close: 3 },
         { name: "Tokio", flag: "🇯🇵", open: 20, close: 5 },
@@ -173,7 +172,6 @@
       ];
     };
 
-    // Obtener el estado de las sesiones
     function getStatus(session, now) {
       const openTime = parseHourDecimal(session.open);
       const closeTime = parseHourDecimal(session.close);
@@ -191,7 +189,6 @@
       return { isOpen, progress, minutesToOpen, minutesToClose };
     }
 
-    // Actualizar el reloj con la zona horaria seleccionada
     function updateClock(offset) {
       const now = new Date();
       const utc = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
@@ -200,7 +197,6 @@
       return local;
     }
 
-    // Actualizar las sesiones según la hora local
     function updateSessions(local) {
       const container = document.getElementById("sessions");
       container.innerHTML = "";
@@ -235,25 +231,22 @@
       });
     }
 
-    // Poblar las zonas horarias disponibles
     function populateTimezones() {
       const select = document.getElementById("timezone");
       for (let i = -12; i <= 14; i++) {
         const option = document.createElement("option");
         option.value = i;
         option.textContent = `GMT ${i >= 0 ? "+" + i : i} (${capitals[i] || "Ciudad desconocida"})`;
-        if (i === 0) option.selected = true;  // Seleccionar UTC por defecto
+        if (i === -3) option.selected = true;
         select.appendChild(option);
       }
     }
 
-    // Función para actualizar el gráfico en tiempo real de NASDAQ o S&P 500
     function updateChart(symbol = "NASDAQ:NDX") {
       document.getElementById("chartFrame").src = `https://s.tradingview.com/embed-widget/mini-symbol-overview/?symbol=${symbol}&locale=es&utm_source=embed&utm_medium=widget&utm_campaign=chart&theme=dark&style=1`;
       document.getElementById("chart-title").textContent = symbol.includes("SP") ? "S&P 500 en tiempo real" : "NASDAQ en tiempo real";
     }
 
-    // Iniciar la aplicación
     function startApp() {
       populateTimezones();
       let offset = parseInt(document.getElementById("timezone").value);
@@ -275,7 +268,6 @@
         updateChart(e.target.value);
       });
     }
-
     startApp();
   </script>
 </body>
