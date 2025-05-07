@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor de Sesiones de Mercado</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white">
+  <div class="p-4 text-center text-xl font-bold" id="clock"></div>
+  <div class="p-4 text-center">
+    <label for="timezone" class="mr-2">Zona horaria:</label>
+    <select id="timezone" class="text-black px-2 py-1 rounded">
+      <option value="America/Montevideo">Uruguay</option>
+      <option value="UTC">UTC</option>
+      <option value="America/New_York">Nueva York</option>
+      <option value="Europe/London">Londres</option>
+      <option value="Asia/Tokyo">Tokio</option>
+      <option value="Australia/Sydney">Sídney</option>
+    </select>
+  </div>
+  <div id="root" class="p-6"></div>
+
+  <script type="text/babel">
+    const sessions = [
+      { name: 'Tokio', tz: 'Asia/Tokyo', start: "09:00", end: "15:30" },
+      { name: 'Sídney', tz: 'Australia/Sydney', start: "09:00", end: "16:00" },
+      { name: 'Londres', tz: 'Europe/London', start: "08:00", end: "16:30" },
+      { name: 'Nueva York', tz: 'America/New_York', start: "09:30", end: "16:00" },
+      { name: 'NASDAQ', tz: 'America/New_York', start: "09:30", end: "16:00" },
+    ];
+
+    function parseTime(t, tz, targetTz) {
+      const [h, m] = t.split(":");
+      const date = new Date();
+      date.setUTCHours(0, 0, 0, 0);
+      date.setHours(h, m);
+      const utcTime = new Date(date.toLocaleString("en-US", { timeZone: tz }));
+      return new Date(utcTime.toLocaleString("en-US", { timeZone: targetTz }));
+    }
+
+    function getCurrentTime(tz) {
+      return new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+    }
+
+    function formatTime(d) {
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function getCountdown(target, now) {
+      const diff = Math.max(0, target - now);
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours}h ${minutes}m`;
+    }
+
+    function MarketSessionTracker() {
+      const [tz, setTz] = React.useState("America/Montevideo");
+      const [now, setNow] = React.useState(getCurrentTime(tz));
+
+      React.useEffect(() => {
+        const interval = setInterval(() => {
+          setNow(getCurrentTime(tz));
+          document.getElementById('clock').textContent = now.toLocaleString("es-UY", { timeZone: tz });
+        }, 1000);
+        return () => clearInterval(interval);
+      }, [tz]);
+
+      React.useEffect(() => {
+        document.getElementById("timezone").addEventListener("change", (e) => {
+          setTz(e.target.value);
+        });
+      }, []);
+
+      const sessionData = sessions.map((s) => {
+        const start = parseTime(s.start, s.tz, tz);
+        const end = parseTime(s.end, s.tz, tz);
+        const isOpen = now >= start && now < end;
+        return { ...s, start, end, isOpen };
+      });
+
+      const nextOpenings = sessions
+        .map((s) => ({ ...s, start: parseTime(s.start, s.tz, tz) }))
+        .filter(s => s.start > now)
+        .sort((a, b) => a.start - b.start);
+
+      const nextSession = nextOpenings.length ? nextOpenings[0] : null;
+
+      return (
+        <div className="space-y-6">
+          <table className="table-auto w-full text-left text-sm text-white border-separate border-spacing-y-2">
+            <thead>
+              <tr>
+                <th>Sesión</th>
+                <th>Abre</th>
+                <th>Cierra</th>
+                <th>Estado</th>
+                <th>Tiempo restante</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessionData.map((s) => {
+                const status = s.isOpen ? "En curso" : now < s.start ? "Próxima" : "Cerrada";
+                const countdown = s.isOpen ? getCountdown(s.end, now) : now < s.start ? getCountdown(s.start, now) : "-";
+                return (
+                  <tr key={s.name} className="bg-gray-800 rounded">
+                    <td className="px-2 py-1">{s.name}</td>
+                    <td className="px-2 py-1">{formatTime(s.start)}</td>
+                    <td className="px-2 py-1">{formatTime(s.end)}</td>
+                    <td className="px-2 py-1 font-bold">{status}</td>
+                    <td className="px-2 py-1">{countdown}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {nextSession && (
+            <div className="mt-4 text-sm text-center">
+              <strong>Próxima sesión:</strong> {nextSession.name} abre en {getCountdown(nextSession.start, now)} ({formatTime(nextSession.start)})
+            </div>
+          )}
+
+          <div className="mt-6 text-xs text-center text-gray-400">
+            <p>Horarios adaptados automáticamente según la zona horaria seleccionada y los ajustes por horario de verano/invierno.</p>
+            <p>Los cambios de horario (DST) se aplican según el país de origen de cada sesión.</p>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<MarketSessionTracker />);
+  </script>
+</body>
+</html>
