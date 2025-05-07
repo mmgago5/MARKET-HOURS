@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Session Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white">
+  <div class="p-4 text-center text-xl font-bold" id="clock"></div>
+  <div id="root" class="p-6"></div>
+
+  <script type="text/babel">
+    const sessions = [
+      { name: 'Tokio', start: 21, end: 3.5, color: 'bg-blue-500' },
+      { name: 'Sídney', start: 21, end: 3, color: 'bg-yellow-500' },
+      { name: 'Londres', start: 4, end: 12.5, color: 'bg-green-500' },
+      { name: 'Nueva York', start: 10.5, end: 17, color: 'bg-red-500' },
+      { name: 'NASDAQ', start: 10.5, end: 17, color: 'bg-purple-500' },
+    ];
+
+    function getCurrentHour() {
+      const now = new Date();
+      return now.getHours() + now.getMinutes() / 60;
+    }
+
+    function formatHour(decimalHour) {
+      const hours = Math.floor(decimalHour);
+      const minutes = Math.round((decimalHour - hours) * 60);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    function timeUntil(targetHour, currentHour) {
+      let diff = targetHour - currentHour;
+      if (diff < 0) diff += 24;
+      const hours = Math.floor(diff);
+      const minutes = Math.round((diff - hours) * 60);
+      return `${hours}h ${minutes}m`;
+    }
+
+    function calculateProgress(start, end, current) {
+      const adjust = (h) => (h < start ? h + 24 : h);
+      const duration = adjust(end) - start;
+      const progress = ((adjust(current) - start) / duration) * 100;
+      return Math.max(0, Math.min(progress, 100));
+    }
+
+    function MarketSessionTracker() {
+      const [currentHour, setCurrentHour] = React.useState(getCurrentHour());
+
+      React.useEffect(() => {
+        const interval = setInterval(() => {
+          setCurrentHour(getCurrentHour());
+          document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+        return () => clearInterval(interval);
+      }, []);
+
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sessions.map((session) => {
+            const inSession = calculateProgress(session.start, session.end, currentHour);
+            const status =
+              inSession > 0 && inSession < 100
+                ? 'En curso'
+                : inSession >= 100
+                ? 'Finalizado'
+                : 'Por comenzar';
+
+            const timeToOpen = timeUntil(session.start, currentHour);
+            const timeToClose = timeUntil(session.end, currentHour);
+
+            return (
+              <div key={session.name} className="bg-gray-800 rounded-xl p-4 shadow-md">
+                <div className="flex justify-between mb-2">
+                  <span className="font-bold">{session.name}</span>
+                  <span className="text-sm">{status}</span>
+                </div>
+                <div className="text-sm text-gray-300 mb-1">
+                  Horario: {formatHour(session.start)} - {formatHour(session.end)}
+                </div>
+                <div className="text-sm text-gray-400 mb-2">
+                  {status === 'Por comenzar' && `Abre en: ${timeToOpen}`}
+                  {status === 'En curso' && `Cierra en: ${timeToClose}`}
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-4 mb-2">
+                  <div
+                    className={`h-4 rounded-full ${session.color}`}
+                    style={{ width: `${inSession}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {sessions
+                    .filter(s => s.name !== session.name)
+                    .map(other => {
+                      const otherProgress = calculateProgress(other.start, other.end, currentHour);
+                      const overlap = inSession > 0 && inSession < 100 && otherProgress > 0 && otherProgress < 100;
+                      return overlap ? <div key={other.name}>Coincide con {other.name}</div> : null;
+                    })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<MarketSessionTracker />);
+  </script>
+</body>
+</html>
